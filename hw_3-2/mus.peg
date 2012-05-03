@@ -1,0 +1,76 @@
+﻿start =
+  whitespace? end
+    {return "";}
+/ whitespace? expr:expr end
+    {return expr;}  
+
+expr = 
+  whitespace? expr:(par/seq/group/repeat/sign) whitespace?
+    {return expr;}
+
+sign = 
+  rest
+/ note
+
+repeat = 
+  count:number ":" expr:(group/sign)
+    {return {tag:"repeat", count:count, section:expr};}
+
+group = 
+  "(" expr:expr ")"
+    {return expr;}
+/ "(" whitespace? ")"
+    {return "";}
+
+seq =
+  left:(group/repeat/sign) whitespace? right:expr
+    {return {tag:'seq', left:left, right:right};}
+
+par =
+  left:(seq/group/repeat/sign) whitespace? ";" whitespace? right:expr
+    {return {tag:'par', left:left, right:right};}
+
+
+rest = 
+  "-" duration:number
+    { return {'tag' : 'rest', 'dur' : duration};}
+
+note =
+  pitch:pitch "-" duration:number
+    { return {'tag' : 'note', 'pitch' : pitch, 'dur' : duration};}
+    
+pitch = 
+  chars:chars octave:octave
+    {return chars + octave;}
+
+chars =
+  a:[a-g] b:"#"?
+    {return a + b;}
+
+octave = 
+  number
+
+number =
+  first:[1-9] last:[0-9]*
+    {return first + last.join("");}
+/ "0"
+
+whitespace = 
+  (comment / newline / space)+
+
+comment =
+  newline? ";;" [^\n\r]* ("\;"/eol)
+
+eol = 
+  newline
+/ !.
+
+newline = 
+  [\n\r]
+
+space = 
+  "\t"
+/ " "
+
+end =
+  whitespace? !.

@@ -97,7 +97,7 @@ assert.deepEqual( result, expected );
 console.log("output: " + JSON.stringify(result) + "\n");
 
 //Sequence with repeated group of parallel notes
-string = "4:(c2-200;g4-100 a4-100) f2-100"; result = parse(string); 
+string = "4:(c2-200 ; g4-100 a4-100) f2-100"; result = parse(string); 
 expected = {
 	"tag":"seq",
 	"left":{

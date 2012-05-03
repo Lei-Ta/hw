@@ -1,4 +1,4 @@
-Scheem parser with whitespace, newlines, quotes and comments.
+It is Scheem parser with whitespace, newlines, quotes and comments.
 
 Program text
 

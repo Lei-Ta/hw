@@ -1,0 +1,54 @@
+start =
+	whitespace? end
+		{return "";}
+/ whitespace? expr:expr end
+		{return expr;}  
+
+expr = 
+	simpleexpr
+/ quotedexpr
+/ listofexpr
+
+simpleexpr =
+	atom:atom whitespace?
+		{return atom;}
+
+quotedexpr = 
+	"'" expr:expr whitespace?
+		{return ["quote", expr];}
+
+listofexpr = 
+	"(" exprlist:spacedexpr* whitespace? ")" whitespace?
+		{return exprlist;}
+
+atom = 
+	chars:validchar+
+		{ return chars.join(""); }
+
+validchar = 
+	[0-9a-zA-Z_?!+\-=@#$%^&*/.]
+
+spacedexpr = 
+	whitespace? expr:expr
+		{return expr}
+
+whitespace = 
+	(comment / newline / space)+
+
+comment =
+	newline? ";;" [^\n\r]* eol
+
+eol = 
+	newline
+/ !.
+
+newline = 
+	[\n\r]
+
+space = 
+	"\t"
+/ " "
+
+end =
+	whitespace? !.
+

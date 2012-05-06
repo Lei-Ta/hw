@@ -1,0 +1,306 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Mocha Tests</title>
+    <link rel="stylesheet" href="http://nathansuniversity.com/css/mocha.css" />
+    <script src="http://nathansuniversity.com/js/jquery-1.7.1.min.js"></script>
+    <script src="http://nathansuniversity.com/js/chai.js"></script>
+    <script src="http://nathansuniversity.com/js/mocha.js"></script>
+    <script src="../parser.js"></script>
+    <script>mocha.setup('tdd')</script>
+    <script>
+      var expect = chai.expect;    
+      var assert = chai.assert;
+
+      // A half-baked implementation of evalScheem
+      var evalScheem = function (expr, env) {
+        // Numbers evaluate to themselves
+        if (typeof expr === 'number') {
+            return expr;
+        }
+        // Strings are variable references
+        if (typeof expr === 'string') {
+            return env[expr];
+        }
+        // Look at head of list for operation
+        switch (expr[0]) {
+        case '+':
+          var expr1 = evalScheem(expr[1], env), expr2 = evalScheem(expr[2], env);
+          if (typeof expr1 === 'number' && typeof expr2 === 'number'){
+            return expr1 + expr2;
+          }
+          throw new Error("not a number");
+          return 0;
+        case '-':
+          var expr1 = evalScheem(expr[1], env), expr2 = evalScheem(expr[2], env);
+          if (typeof expr1 === 'number' && typeof expr2 === 'number'){
+            return expr1 - expr2;
+          }
+          throw new Error("not a number");
+          return 0;
+        case '*':
+          var expr1 = evalScheem(expr[1], env), expr2 = evalScheem(expr[2], env);
+          if (typeof expr1 === 'number' && typeof expr2 === 'number'){
+            return expr1 * expr2;
+          }
+          throw new Error("not a number");
+          return 0;
+        case '/':
+          var expr1 = evalScheem(expr[1], env), expr2 = evalScheem(expr[2], env);
+          if (typeof expr1 === 'number' && typeof expr2 === 'number'){
+            return expr1 / expr2;
+          }
+          throw new Error("not a number");
+          return 0;
+        case 'quote':
+          return expr[1];
+        case '=':
+          var eq = (evalScheem(expr[1], env) === evalScheem(expr[2], env));
+          if (eq) return '#t';
+          return '#f';
+        case '<':
+          var eq = (evalScheem(expr[1], env) < evalScheem(expr[2], env));
+          if (eq) return '#t';
+          return '#f';
+        case '>':
+          var eq = (evalScheem(expr[1], env) > evalScheem(expr[2], env));
+          if (eq) return '#t';
+          return '#f';
+        case 'define':
+          if(typeof env[expr[1]] === 'undefined'){
+            env[expr[1]] = evalScheem(expr[2], env); 
+          }
+          return 0;
+        case 'set!':
+          if(typeof(env[expr[1]]) !== 'undefined'){
+            env[expr[1]] = evalScheem(expr[2], env); 
+          }
+          return 0;
+        case 'begin':
+          var result;
+          for (var i = 1; i < expr.length; i++){
+              result = evalScheem(expr[i], env);
+          }
+          return result;
+        case 'if':
+          var cond = evalScheem(expr[1], env);
+          if (cond === '#t'){
+              return evalScheem(expr[2], env);
+          } else if (cond === '#f'){
+              return evalScheem(expr[3], env);
+          }
+          return 0;
+        case 'cons':
+          var expr1 = evalScheem(expr[1], env), expr2 = evalScheem(expr[2], env);
+          return [evalScheem(expr[1], env)].concat(evalScheem(expr[2], env));
+        case 'car':
+          return evalScheem(expr[1], env).shift();
+        case 'cdr':
+          var expr1 = evalScheem(expr[1], env);
+          expr1.shift();
+          return expr1;
+        }
+      };
+      
+      var evalScheemString = function(string, env){
+        return evalScheem(Scheem.parse(string), env);
+      }
+      
+      suite('Numbers', function() {
+        test('octal', function() {
+          assert.deepEqual(
+            evalScheemString('( / 0c22 0c3)', {}),
+            6
+          );
+        });
+        test('hexadecimal', function() {
+          assert.deepEqual(
+            evalScheemString('( / 0h12 0h3)', {}),
+            6
+          );
+        });
+        test('binary', function() {
+          assert.deepEqual(
+            evalScheemString('( / 0b10010 0b11)', {}),
+            6
+          );
+        });
+        test('decimal numbers', function() {
+          assert.deepEqual(
+            evalScheemString('( / 0018 0003)', {}),
+            6
+          );
+        });
+      });
+      suite('Variables', function() {
+        test('a variable', function() {
+          assert.deepEqual(
+            evalScheemString("x", {x:5}),
+            5
+          );
+        });
+        test('define', function() {
+          assert.deepEqual(
+            evalScheemString("(begin (define x 5) (define y 2) ( + x y ) )", {}),
+            7
+          );
+        });
+        test('set!', function() {
+          assert.deepEqual(
+            evalScheemString("(begin (define x 5) (set! x ( + x 2)) x )", {}),
+            7
+          );
+        });
+      });
+      suite('Operations', function() {
+        test('single number', function() {
+          assert.deepEqual(
+            evalScheemString("5", {}),
+            5
+          );
+        });
+        test('addition and subtraction', function() {
+          assert.deepEqual(
+            evalScheemString("( + 3 ( - 6 2))", {}),
+            7
+          );
+        });
+        test('multiplication and division', function() {
+          assert.deepEqual(
+            evalScheemString("( * 4 ( / 8 2))", {}),
+            16
+          );
+        });
+        test("( + 'dog 'cat ) -> Error", function() {
+          expect(function () {
+            evalScheemString("( + 'dog 'cat)", {});
+          }).to.throw();
+        });
+        test("( - 'dogcat 'dog ) -> Error", function() {
+          expect(function () {
+            evalScheemString("( - 'dogcat 'dog )", {});
+          }).to.throw();
+        });
+        test("( / \"dog and cat and mouse\" 'and ) -> Error", function() {
+          expect(function () {
+            evalScheemString("( / \"dog and cat and mouse\" 'and )", {});
+          }).to.throw();
+        });
+      });
+      suite('Quote', function() {
+        test('a number', function() {
+          assert.deepEqual(
+            evalScheemString("'3", {}),
+            3
+          );
+        });
+        test('an atom', function() {
+          assert.deepEqual(
+            evalScheemString("'dog", {}),
+            'dog'
+          );
+        });
+        test('a list', function() {
+          assert.deepEqual(
+            evalScheemString("'(1 2 3)", {}),
+            [1, 2, 3]
+          );
+        });
+      });
+      suite('Comparing', function() {
+        test('equality', function() {
+          assert.deepEqual(
+            evalScheemString("( = 5 5)", {}),
+            '#t'
+          );
+        });
+        test('less than', function() {
+          assert.deepEqual(
+            evalScheemString("( < 4 5)", {}),
+            '#t'
+          );
+        });
+        test('more than', function() {
+          assert.deepEqual(
+            evalScheemString("( > 4 5)", {}),
+            '#f'
+          );
+        });
+      });
+      suite('If', function() {
+        test("(if (= 1 1) 2 3) -> 2", function() {
+          assert.deepEqual(
+            evalScheemString("(if (= 1 1) 2 3)", {}),
+            2
+          );
+        });
+        test("(if (= 1 0) 2 3) -> 3", function() {
+          assert.deepEqual(
+            evalScheemString("(if (= 1 0) 2 3)", {}),
+            3
+          );
+        });
+        test("(if (= 1 1) (if (= 2 3) 10 11) 12) -> 11", function() {
+          assert.deepEqual(
+            evalScheemString("(if (= 1 1) (if (= 2 3) 10 11) 12)", {}),
+            11
+          );
+        });
+        test("(if (> 2 1) 2 3) -> 2", function() {
+          assert.deepEqual(
+            evalScheemString("(if ( > 2 1) 2 3)", {}),
+            2
+          );
+        });
+        test("(if (< 2 1) 2 3) -> 3", function() {
+          assert.deepEqual(
+            evalScheemString("(if ( < 2 1) 2 3)", {}),
+            3
+          );
+        });
+      });
+      suite('Lists', function() {
+        test("cons (unshift)", function() {
+          assert.deepEqual(
+            evalScheemString("(cons 1 '(2 3))", {}),
+            [1, 2, 3]
+          );
+        });
+        test("cons (unshift)", function() {
+          assert.deepEqual(
+            evalScheemString("(cons '(1 2) \'(3 4))", {}),
+            [[1, 2], 3, 4]
+          );
+        });
+        test("car (shift)", function() {
+          assert.deepEqual(
+            evalScheemString("(car '((1 2) 3 4))", {}),
+            [1, 2]
+          );
+        });
+        test("cdr (shift)", function() {
+          assert.deepEqual(
+            evalScheemString("(cdr '((1 2) 3 4))", {}),
+            [3, 4]
+          );
+        });
+      });
+      suite('Experimental', function() {
+        test("error difining function (answer is 12 instead of 14", function() {
+          assert.deepEqual(
+            evalScheemString("( begin (define x 5) (define y (begin(+ x 7)) ) (set! x 7) y )", {}),
+            12
+          );
+        });
+      });
+    </script>
+    <script>
+      $(function(){
+        mocha.run();
+      });
+    </script>
+  </head>
+  <body>
+    <div id="mocha"></div>
+  </body>
+</html>

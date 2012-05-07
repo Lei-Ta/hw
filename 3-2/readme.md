@@ -19,7 +19,7 @@ Example:
 4:(c2-200 ; g4-100 a4-100) f2-100
 
 parses to 
-
+```
 {
 	"tag":"seq",
 	"left":{
@@ -53,3 +53,4 @@ parses to
 		"dur":"100"
 	}
 } 
+``` 

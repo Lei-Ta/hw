@@ -1,0 +1,103 @@
+start =
+	whitespace? end
+		{return "";}
+/ whitespace? expr:expr end
+		{return expr;}  
+
+expr = 
+	simpleexpr
+/ quotedexpr
+/ listofexpr
+
+simpleexpr =
+	atom:atom whitespace?
+		{return atom;}
+
+quotedexpr = 
+	"'" expr:expr whitespace?
+		{return ["quote", expr];}
+
+listofexpr = 
+	"(" exprlist:spacedexpr* whitespace? ")" whitespace?
+		{return exprlist;}
+
+atom = 
+	number
+/	symbol
+/	string
+
+
+number = 
+	octal
+/	hexadecimal
+/	binary
+/	decimal
+
+
+octal =
+	"0" [cC] octals:octadigit+
+		{return parseInt(octals.join(""), 8);}
+
+hexadecimal =
+	"0" [hH] octals:hexadigit+
+		{return parseInt(octals.join(""), 16);}
+
+binary =
+	"0" [bB] octals:bidigit+
+		{return parseInt(octals.join(""), 2);}
+
+decimal =
+	digits:digit+
+		{return parseInt(digits.join(""), 10);}
+
+octadigit = 
+	[0-7]
+
+hexadigit =
+	digit
+/	[a-fA-F]
+
+bidigit = 
+	[01]
+
+digit =
+	[0-9]
+
+symbol =
+	chars:symbolchar+
+		{ return chars.join(""); }
+string =
+
+	"\"" chars:strchar+ "\""
+		{ return ['quote', chars.join("")]; }
+
+symbolchar = 
+	[0-9a-zA-Z_?!+\-=@#$%^&*/\.]
+
+strchar = 
+	symbolchar
+/	" "
+
+spacedexpr = 
+	whitespace? expr:expr
+		{return expr}
+
+whitespace = 
+	(comment / newline / space)+
+
+comment =
+	newline? ";;" [^\n\r]* eol
+
+eol = 
+	newline
+/ !.
+
+newline = 
+	[\n\r]
+
+space = 
+	"\t"
+/ " "
+
+end =
+	whitespace? !.
